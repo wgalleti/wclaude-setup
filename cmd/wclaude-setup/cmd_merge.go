@@ -7,7 +7,6 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
-	"github.com/wgalleti/wclaude-setup/internal/config"
 	"github.com/wgalleti/wclaude-setup/internal/merge"
 	"github.com/wgalleti/wclaude-setup/internal/setup"
 	"github.com/wgalleti/wclaude-setup/internal/templates"
@@ -84,47 +83,9 @@ func runMergeForStack(dir string, stack setup.Stack) {
 	}
 	tui.LogSuccess(fmt.Sprintf("Template carregado (%d bytes)", len(tmplContent)))
 
-	cfg, err := config.Load()
-	if err != nil {
-		tui.LogError("Erro ao carregar config: " + err.Error())
+	cfg, err := ensureAPIKey()
+	if cfg == nil {
 		return
-	}
-
-	if cfg.AnthropicAPIKey == "" {
-		cfg.AnthropicAPIKey = os.Getenv("ANTHROPIC_API_KEY")
-	}
-
-	if cfg.AnthropicAPIKey == "" {
-		tui.LogWarn("API key nao configurada")
-
-		var apiKey string
-		field := huh.NewInput().
-			Title("ANTHROPIC_API_KEY (necessaria para merge):").
-			EchoMode(huh.EchoModePassword).
-			Value(&apiKey)
-
-		if err := huh.NewForm(huh.NewGroup(field)).Run(); err != nil {
-			return
-		}
-
-		cfg.AnthropicAPIKey = apiKey
-
-		var saveKey bool
-		confirm := huh.NewConfirm().
-			Title("Salvar API key para uso futuro?").
-			Value(&saveKey)
-
-		if err := huh.NewForm(huh.NewGroup(confirm)).Run(); err != nil {
-			return
-		}
-
-		if saveKey {
-			if err := cfg.Save(); err != nil {
-				tui.LogError("Erro ao salvar config: " + err.Error())
-			} else {
-				tui.LogSuccess("API key salva em " + config.DefaultConfigPath())
-			}
-		}
 	}
 
 	tui.LogStep("Enviando para API Anthropic (model: " + cfg.DefaultModel + ")...")
