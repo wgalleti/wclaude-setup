@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -26,11 +25,11 @@ func runProject() {
 	dir, _ := os.Getwd()
 	stack := setup.DetectStack(dir)
 
-	fmt.Println(tui.Title.Render("Setup Projeto"))
-	fmt.Printf("  Diretorio: %s\n", tui.Info.Render(dir))
+	tui.PrintHeader("Setup Projeto")
+	tui.LogInfo("Diretorio: " + dir)
 
 	if stack == setup.StackUnknown {
-		fmt.Println(tui.Info.Render("  Stack nao detectada automaticamente"))
+		tui.LogWarn("Stack nao detectada automaticamente")
 
 		var selected string
 		form := huh.NewSelect[string]().
@@ -40,20 +39,23 @@ func runProject() {
 				huh.NewOption("Vue.js / PrimeVue", "vue"),
 				huh.NewOption("Flutter / Dart", "flutter"),
 				huh.NewOption("Go", "go"),
+				huh.NewOption("<< Voltar", "back"),
 			).
 			Value(&selected)
 
-		if err := huh.NewForm(huh.NewGroup(form)).Run(); err != nil {
+		if err := huh.NewForm(huh.NewGroup(form)).Run(); err != nil || selected == "back" {
 			return
 		}
 		stack = setup.Stack(selected)
 	} else {
-		fmt.Printf("  Stack detectada: %s\n", tui.Success.Render(stack.Label()))
+		tui.LogSuccess("Stack detectada: " + stack.Label())
 	}
+
+	tui.LogStep("Criando CLAUDE.md para " + stack.Label() + "...")
 
 	if err := setup.InstallProjectCLAUDE(dir, stack); err != nil {
 		if strings.Contains(err.Error(), "ja existe") {
-			fmt.Println(tui.Info.Render("  " + err.Error()))
+			tui.LogWarn(err.Error())
 
 			var doMerge bool
 			confirm := huh.NewConfirm().
@@ -67,10 +69,12 @@ func runProject() {
 				runMergeForStack(dir, stack)
 			}
 		} else {
-			fmt.Println(tui.Error.Render("  Erro: " + err.Error()))
+			tui.LogError(err.Error())
 		}
+		tui.WaitForEnter()
 		return
 	}
 
-	fmt.Println(tui.Success.Render("  Projeto configurado! Edite o CLAUDE.md com os dados do projeto."))
+	tui.LogSuccess("CLAUDE.md criado! Edite com os dados do projeto.")
+	tui.WaitForEnter()
 }

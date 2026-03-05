@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 
@@ -21,7 +19,7 @@ func newInitCmd() *cobra.Command {
 }
 
 func runInit() {
-	fmt.Println(tui.Title.Render("Setup Global"))
+	tui.PrintHeader("Setup Global")
 
 	var tasks []string
 	form := huh.NewMultiSelect[string]().
@@ -37,22 +35,32 @@ func runInit() {
 		return
 	}
 
+	if len(tasks) == 0 {
+		tui.LogWarn("Nenhuma opcao selecionada")
+		tui.WaitForEnter()
+		return
+	}
+
 	for _, t := range tasks {
 		switch t {
 		case "claude":
+			tui.LogStep("Instalando CLAUDE.md global...")
 			if err := setup.InstallGlobalCLAUDE(); err != nil {
-				fmt.Println(tui.Error.Render("  Erro: " + err.Error()))
+				tui.LogError(err.Error())
 			} else {
-				fmt.Println(tui.Success.Render("  CLAUDE.md global instalado"))
+				tui.LogSuccess("CLAUDE.md global instalado")
 			}
 		case "settings":
+			tui.LogStep("Configurando settings.json...")
 			if err := setup.InstallSettings(); err != nil {
-				fmt.Println(tui.Error.Render("  Erro: " + err.Error()))
+				tui.LogError(err.Error())
 			} else {
-				fmt.Println(tui.Success.Render("  settings.json configurado"))
+				tui.LogSuccess("settings.json configurado")
 			}
 		case "mcps":
 			runMCPInstall()
 		}
 	}
+
+	tui.WaitForEnter()
 }

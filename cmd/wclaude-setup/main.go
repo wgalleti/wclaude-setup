@@ -35,38 +35,55 @@ func main() {
 }
 
 func runInteractive(cmd *cobra.Command, args []string) {
-	fmt.Println(tui.Title.Render("wclaude-setup"))
+	clearScreen()
+	fmt.Println(tui.Title.Render("wclaude-setup v" + version))
+	dir, _ := os.Getwd()
+	tui.LogInfo("Diretorio: " + dir)
+	tui.PrintSeparator()
 
-	var action string
-	form := huh.NewSelect[string]().
-		Title("O que deseja fazer?").
-		Options(
-			huh.NewOption("Setup global (~/.claude)", "init"),
-			huh.NewOption("Setup projeto (diretorio atual)", "project"),
-			huh.NewOption("Gerenciar MCPs", "mcp"),
-			huh.NewOption("Gerar prompt eficiente", "prompt"),
-			huh.NewOption("Merge CLAUDE.md (existente + template)", "merge"),
-			huh.NewOption("Configurar API key", "config"),
-			huh.NewOption("Sair", "exit"),
-		).
-		Value(&action)
+	for {
+		var action string
+		form := huh.NewSelect[string]().
+			Title("Menu principal").
+			Options(
+				huh.NewOption("Setup global (~/.claude)", "init"),
+				huh.NewOption("Setup projeto (diretorio atual)", "project"),
+				huh.NewOption("Gerenciar MCPs", "mcp"),
+				huh.NewOption("Gerar prompt eficiente", "prompt"),
+				huh.NewOption("Merge CLAUDE.md (existente + template)", "merge"),
+				huh.NewOption("Configuracao", "config"),
+				huh.NewOption("Sair", "exit"),
+			).
+			Value(&action)
 
-	if err := huh.NewForm(huh.NewGroup(form)).Run(); err != nil {
-		return
+		if err := huh.NewForm(huh.NewGroup(form)).Run(); err != nil {
+			return
+		}
+
+		if action == "exit" {
+			tui.LogInfo("Ate mais!")
+			return
+		}
+
+		switch action {
+		case "init":
+			runInit()
+		case "project":
+			runProject()
+		case "mcp":
+			runMCP()
+		case "prompt":
+			runPrompt()
+		case "merge":
+			runMerge()
+		case "config":
+			runConfig()
+		}
+
+		tui.PrintSeparator()
 	}
+}
 
-	switch action {
-	case "init":
-		runInit()
-	case "project":
-		runProject()
-	case "mcp":
-		runMCP()
-	case "prompt":
-		runPrompt()
-	case "merge":
-		runMerge()
-	case "config":
-		runConfig()
-	}
+func clearScreen() {
+	fmt.Print("\033[H\033[2J")
 }

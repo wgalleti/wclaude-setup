@@ -21,6 +21,7 @@ func newConfigCmd() *cobra.Command {
 		Short: "Configurar API key da Anthropic",
 		Run: func(cmd *cobra.Command, args []string) {
 			runConfig()
+			tui.WaitForEnter()
 		},
 	})
 
@@ -28,19 +29,7 @@ func newConfigCmd() *cobra.Command {
 		Use:   "show",
 		Short: "Mostrar configuracao atual",
 		Run: func(cmd *cobra.Command, args []string) {
-			cfg, err := config.Load()
-			if err != nil {
-				fmt.Println(tui.Error.Render(err.Error()))
-				return
-			}
-			fmt.Println(tui.Title.Render("Configuracao"))
-			keyDisplay := "(nao configurada)"
-			if cfg.AnthropicAPIKey != "" {
-				keyDisplay = cfg.AnthropicAPIKey[:8] + "..."
-			}
-			fmt.Printf("  API Key: %s\n", keyDisplay)
-			fmt.Printf("  Model:   %s\n", cfg.DefaultModel)
-			fmt.Printf("  Arquivo: %s\n", config.DefaultConfigPath())
+			runConfigShow()
 		},
 	})
 
@@ -48,9 +37,58 @@ func newConfigCmd() *cobra.Command {
 }
 
 func runConfig() {
+	for {
+		tui.PrintHeader("Configuracao")
+
+		var action string
+		form := huh.NewSelect[string]().
+			Title("Configuracao").
+			Options(
+				huh.NewOption("Configurar API key e model", "set"),
+				huh.NewOption("Mostrar configuracao atual", "show"),
+				huh.NewOption("<< Voltar", "back"),
+			).
+			Value(&action)
+
+		if err := huh.NewForm(huh.NewGroup(form)).Run(); err != nil || action == "back" {
+			return
+		}
+
+		switch action {
+		case "set":
+			runConfigSet()
+		case "show":
+			runConfigShow()
+		}
+
+		tui.WaitForEnter()
+	}
+}
+
+func runConfigShow() {
+	tui.LogStep("Carregando configuracao...")
+
 	cfg, err := config.Load()
 	if err != nil {
-		fmt.Println(tui.Error.Render(err.Error()))
+		tui.LogError(err.Error())
+		return
+	}
+
+	keyDisplay := "(nao configurada)"
+	if cfg.AnthropicAPIKey != "" {
+		keyDisplay = cfg.AnthropicAPIKey[:8] + "..."
+	}
+
+	tui.LogSuccess("Configuracao carregada:")
+	fmt.Printf("    API Key:  %s\n", keyDisplay)
+	fmt.Printf("    Model:    %s\n", cfg.DefaultModel)
+	fmt.Printf("    Arquivo:  %s\n", config.DefaultConfigPath())
+}
+
+func runConfigSet() {
+	cfg, err := config.Load()
+	if err != nil {
+		tui.LogError(err.Error())
 		return
 	}
 
@@ -72,15 +110,22 @@ func runConfig() {
 
 	if apiKey != "" {
 		cfg.AnthropicAPIKey = apiKey
+		tui.LogInfo("API key atualizada")
 	}
 	if model != "" {
 		cfg.DefaultModel = model
+		tui.LogInfo("Model atualizado para " + model)
 	}
 
-	if err := cfg.Save(); err != nil {
-		fmt.Println(tui.Error.Render("Erro ao salvar: " + err.Error()))
+	if apiKey == "" && model == "" {
+		tui.LogWarn("Nenhuma alteracao feita")
 		return
 	}
 
-	fmt.Println(tui.Success.Render("Configuracao salva em " + config.DefaultConfigPath()))
+	tui.LogStep("Salvando configuracao...")
+	if err := cfg.Save(); err != nil {
+		tui.LogError("Erro ao salvar: " + err.Error())
+		return
+	}
+	tui.LogSuccess("Configuracao salva em " + config.DefaultConfigPath())
 }

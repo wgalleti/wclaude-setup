@@ -32,47 +32,59 @@ func newMCPCmd() *cobra.Command {
 }
 
 func runMCP() {
-	var action string
-	form := huh.NewSelect[string]().
-		Title("MCPs:").
-		Options(
-			huh.NewOption("Instalar MCPs", "install"),
-			huh.NewOption("Remover MCP", "remove"),
-			huh.NewOption("Listar instalados", "list"),
-		).
-		Value(&action)
+	for {
+		tui.PrintHeader("Gerenciar MCPs")
 
-	if err := huh.NewForm(huh.NewGroup(form)).Run(); err != nil {
-		return
-	}
+		var action string
+		form := huh.NewSelect[string]().
+			Title("MCPs").
+			Options(
+				huh.NewOption("Instalar MCPs", "install"),
+				huh.NewOption("Remover MCP", "remove"),
+				huh.NewOption("Listar instalados", "list"),
+				huh.NewOption("<< Voltar", "back"),
+			).
+			Value(&action)
 
-	switch action {
-	case "install":
-		runMCPInstall()
-	case "remove":
-		runMCPRemove()
-	case "list":
-		runMCPList()
+		if err := huh.NewForm(huh.NewGroup(form)).Run(); err != nil || action == "back" {
+			return
+		}
+
+		switch action {
+		case "install":
+			runMCPInstall()
+		case "remove":
+			runMCPRemove()
+		case "list":
+			runMCPList()
+		}
+
+		tui.WaitForEnter()
 	}
 }
 
 func runMCPList() {
+	tui.LogStep("Consultando MCPs instalados...")
+
 	installed, err := mcp.ListInstalled()
 	if err != nil {
-		fmt.Println(tui.Error.Render(err.Error()))
+		tui.LogError(err.Error())
 		return
 	}
+
 	if len(installed) == 0 {
-		fmt.Println(tui.Info.Render("Nenhum MCP instalado"))
+		tui.LogWarn("Nenhum MCP instalado")
 		return
 	}
-	fmt.Println(tui.Title.Render("MCPs instalados:"))
+
+	tui.LogSuccess(fmt.Sprintf("%d MCP(s) encontrado(s):", len(installed)))
 	for _, name := range installed {
-		fmt.Printf("  - %s\n", name)
+		fmt.Printf("    - %s\n", name)
 	}
 }
 
 func runMCPInstall() {
+	tui.LogStep("Consultando MCPs instalados...")
 	installed, _ := mcp.ListInstalled()
 
 	var options []huh.Option[string]
@@ -94,9 +106,14 @@ func runMCPInstall() {
 		return
 	}
 
+	if len(selected) == 0 {
+		tui.LogWarn("Nenhum MCP selecionado")
+		return
+	}
+
 	for _, name := range selected {
 		if mcp.IsInstalled(name, installed) {
-			fmt.Printf("  %s ja instalado\n", tui.Info.Render(name))
+			tui.LogWarn(name + " ja esta instalado, pulando")
 			continue
 		}
 
@@ -113,6 +130,7 @@ func runMCPInstall() {
 					envVal := os.Getenv(k)
 					if envVal != "" {
 						m.EnvVars[k] = envVal
+						tui.LogInfo(fmt.Sprintf("%s carregado do ambiente", k))
 						continue
 					}
 					var input string
@@ -127,11 +145,11 @@ func runMCPInstall() {
 				}
 			}
 
-			fmt.Printf("  Instalando %s...\n", name)
+			tui.LogStep("Instalando " + name + "...")
 			if err := mcp.Install(m); err != nil {
-				fmt.Println(tui.Error.Render("  Erro: " + err.Error()))
+				tui.LogError("Falha ao instalar " + name + ": " + err.Error())
 			} else {
-				fmt.Println(tui.Success.Render("  " + name + " instalado"))
+				tui.LogSuccess(name + " instalado com sucesso")
 			}
 			break
 		}
@@ -139,18 +157,20 @@ func runMCPInstall() {
 }
 
 func runMCPRemove() {
+	tui.LogStep("Consultando MCPs instalados...")
 	installed, err := mcp.ListInstalled()
 	if err != nil {
-		fmt.Println(tui.Error.Render(err.Error()))
+		tui.LogError(err.Error())
 		return
 	}
 
 	if len(installed) == 0 {
-		fmt.Println(tui.Info.Render("Nenhum MCP instalado"))
+		tui.LogWarn("Nenhum MCP instalado para remover")
 		return
 	}
 
 	var options []huh.Option[string]
+	options = append(options, huh.NewOption("<< Voltar", "back"))
 	for _, name := range installed {
 		options = append(options, huh.NewOption(name, name))
 	}
@@ -161,13 +181,14 @@ func runMCPRemove() {
 		Options(options...).
 		Value(&selected)
 
-	if err := huh.NewForm(huh.NewGroup(form)).Run(); err != nil {
+	if err := huh.NewForm(huh.NewGroup(form)).Run(); err != nil || selected == "back" {
 		return
 	}
 
+	tui.LogStep("Removendo " + selected + "...")
 	if err := mcp.Remove(selected); err != nil {
-		fmt.Println(tui.Error.Render("Erro: " + err.Error()))
+		tui.LogError("Falha ao remover " + selected + ": " + err.Error())
 	} else {
-		fmt.Println(tui.Success.Render(selected + " removido"))
+		tui.LogSuccess(selected + " removido com sucesso")
 	}
 }
