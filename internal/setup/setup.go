@@ -18,7 +18,7 @@ type Settings struct {
 	Permissions Permissions `json:"permissions"`
 }
 
-var defaultPermissions = []string{
+var DefaultPermissions = []string{
 	"Bash(git diff:*)",
 	"Bash(git log:*)",
 	"Bash(git status:*)",
@@ -36,84 +36,172 @@ var defaultPermissions = []string{
 	"Bash(go build *)",
 }
 
-func InstallGlobalCLAUDE() error {
+type InstallResult struct {
+	Existed    bool
+	BackupPath string
+	DestPath   string
+}
+
+func GlobalCLAUDEPath() string {
+	return filepath.Join(config.ClaudeDir(), "CLAUDE.md")
+}
+
+func SettingsPath() string {
+	return filepath.Join(config.ClaudeDir(), "settings.json")
+}
+
+func GlobalCLAUDEExists() bool {
+	return fileExists(GlobalCLAUDEPath())
+}
+
+func SettingsExists() bool {
+	return fileExists(SettingsPath())
+}
+
+func ReadGlobalCLAUDE() (string, error) {
+	data, err := os.ReadFile(GlobalCLAUDEPath())
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func GlobalCLAUDETemplate() (string, error) {
+	data, err := templates.FS.ReadFile("files/global.md")
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+func InstallGlobalCLAUDE() (*InstallResult, error) {
 	claudeDir := config.ClaudeDir()
 	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
-		return fmt.Errorf("erro ao criar %s: %w", claudeDir, err)
+		return nil, fmt.Errorf("erro ao criar %s: %w", claudeDir, err)
 	}
 
-	dest := filepath.Join(claudeDir, "CLAUDE.md")
+	dest := GlobalCLAUDEPath()
+	result := &InstallResult{DestPath: dest}
 
 	if fileExists(dest) {
+		result.Existed = true
 		backup := dest + ".bak"
 		data, err := os.ReadFile(dest)
 		if err != nil {
-			return fmt.Errorf("erro ao ler CLAUDE.md existente: %w", err)
+			return nil, fmt.Errorf("erro ao ler CLAUDE.md existente: %w", err)
 		}
 		if err := os.WriteFile(backup, data, 0o644); err != nil {
-			return fmt.Errorf("erro ao criar backup: %w", err)
+			return nil, fmt.Errorf("erro ao criar backup: %w", err)
 		}
-		fmt.Printf("  Backup criado em %s\n", backup)
+		result.BackupPath = backup
 	}
 
 	content, err := templates.FS.ReadFile("files/global.md")
 	if err != nil {
-		return fmt.Errorf("erro ao ler template global: %w", err)
+		return nil, fmt.Errorf("erro ao ler template global: %w", err)
 	}
 
 	if err := os.WriteFile(dest, content, 0o644); err != nil {
-		return fmt.Errorf("erro ao escrever CLAUDE.md: %w", err)
+		return nil, fmt.Errorf("erro ao escrever CLAUDE.md: %w", err)
 	}
 
-	fmt.Printf("  CLAUDE.md instalado em %s\n", dest)
-	return nil
+	return result, nil
 }
 
-func InstallSettings() error {
-	settingsPath := filepath.Join(config.ClaudeDir(), "settings.json")
+func WriteGlobalCLAUDE(content string) error {
+	dest := GlobalCLAUDEPath()
+	claudeDir := config.ClaudeDir()
+	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
+		return fmt.Errorf("erro ao criar %s: %w", claudeDir, err)
+	}
+	return os.WriteFile(dest, []byte(content), 0o644)
+}
+
+func InstallSettings() (*InstallResult, error) {
+	settingsPath := SettingsPath()
+	result := &InstallResult{DestPath: settingsPath}
 
 	if fileExists(settingsPath) {
-		fmt.Printf("  settings.json ja existe — nao alterado\n")
-		return nil
+		result.Existed = true
+		return result, nil
 	}
 
 	settings := Settings{
-		Permissions: Permissions{Allow: defaultPermissions},
+		Permissions: Permissions{Allow: DefaultPermissions},
 	}
 
 	data, err := json.MarshalIndent(settings, "", "  ")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := os.WriteFile(settingsPath, data, 0o644); err != nil {
-		return fmt.Errorf("erro ao escrever settings.json: %w", err)
+		return nil, fmt.Errorf("erro ao escrever settings.json: %w", err)
 	}
 
-	fmt.Printf("  settings.json criado em %s\n", settingsPath)
-	return nil
+	return result, nil
 }
 
-func InstallProjectCLAUDE(dir string, stack Stack) error {
+func ReadSettings() (*Settings, error) {
+	data, err := os.ReadFile(SettingsPath())
+	if err != nil {
+		return nil, err
+	}
+	var s Settings
+	if err := json.Unmarshal(data, &s); err != nil {
+		return nil, err
+	}
+	return &s, nil
+}
+
+func MergeSettings(existing *Settings) *Settings {
+	permSet := make(map[string]bool)
+	for _, p := range existing.Permissions.Allow {
+		permSet[p] = true
+	}
+
+	added := false
+	for _, p := range DefaultPermissions {
+		if !permSet[p] {
+			existing.Permissions.Allow = append(existing.Permissions.Allow, p)
+			permSet[p] = true
+			added = added || true
+		}
+	}
+
+	return existing
+}
+
+func WriteSettings(s *Settings) error {
+	data, err := json.MarshalIndent(s, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(SettingsPath(), data, 0o644)
+}
+
+func InstallProjectCLAUDE(dir string, stack Stack) (*InstallResult, error) {
 	tmplName := stack.TemplateName()
 	if tmplName == "" {
-		return fmt.Errorf("stack desconhecida, nao ha template disponivel")
+		return nil, fmt.Errorf("stack desconhecida, nao ha template disponivel")
 	}
 
 	content, err := templates.FS.ReadFile("files/" + tmplName)
 	if err != nil {
-		return fmt.Errorf("erro ao ler template %s: %w", tmplName, err)
+		return nil, fmt.Errorf("erro ao ler template %s: %w", tmplName, err)
 	}
 
 	dest := filepath.Join(dir, "CLAUDE.md")
+	result := &InstallResult{DestPath: dest}
+
 	if fileExists(dest) {
-		return fmt.Errorf("CLAUDE.md ja existe em %s — use 'claude-setup merge' para atualizar", dir)
+		result.Existed = true
+		return result, nil
 	}
 
 	if err := os.WriteFile(dest, content, 0o644); err != nil {
-		return fmt.Errorf("erro ao escrever CLAUDE.md: %w", err)
+		return nil, fmt.Errorf("erro ao escrever CLAUDE.md: %w", err)
 	}
 
-	fmt.Printf("  CLAUDE.md criado em %s (template: %s)\n", dest, stack.Label())
-	return nil
+	return result, nil
 }

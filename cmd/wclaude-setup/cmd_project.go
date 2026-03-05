@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"strings"
 
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
@@ -51,30 +50,36 @@ func runProject() {
 		tui.LogSuccess("Stack detectada: " + stack.Label())
 	}
 
-	tui.LogStep("Criando CLAUDE.md para " + stack.Label() + "...")
+	tui.LogStep("Verificando CLAUDE.md...")
 
-	if err := setup.InstallProjectCLAUDE(dir, stack); err != nil {
-		if strings.Contains(err.Error(), "ja existe") {
-			tui.LogWarn(err.Error())
+	res, err := setup.InstallProjectCLAUDE(dir, stack)
+	if err != nil {
+		tui.LogError(err.Error())
+		tui.WaitForEnter()
+		return
+	}
 
-			var doMerge bool
-			confirm := huh.NewConfirm().
-				Title("Deseja fazer merge com o template?").
-				Value(&doMerge)
+	if res.Existed {
+		tui.LogWarn("CLAUDE.md ja existe em " + res.DestPath)
 
-			if err := huh.NewForm(huh.NewGroup(confirm)).Run(); err != nil {
-				return
-			}
-			if doMerge {
-				runMergeForStack(dir, stack)
-			}
+		var doMerge bool
+		confirm := huh.NewConfirm().
+			Title("Deseja fazer merge com o template?").
+			Value(&doMerge)
+
+		if err := huh.NewForm(huh.NewGroup(confirm)).Run(); err != nil {
+			return
+		}
+		if doMerge {
+			runMergeForStack(dir, stack)
 		} else {
-			tui.LogError(err.Error())
+			tui.LogInfo("CLAUDE.md mantido sem alteracoes")
 		}
 		tui.WaitForEnter()
 		return
 	}
 
-	tui.LogSuccess("CLAUDE.md criado! Edite com os dados do projeto.")
+	tui.LogSuccess("CLAUDE.md criado em " + res.DestPath)
+	tui.LogInfo("Edite o arquivo com os dados especificos do projeto")
 	tui.WaitForEnter()
 }
