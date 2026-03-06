@@ -14,20 +14,24 @@ When uncertain, say so explicitly — never hallucinate APIs or behavior.
 
 ### Primary Languages
 - **Python** — Django, DRF, Celery, async tasks
-- **JavaScript/TypeScript** — Vue.js 3 (Composition API), PrimeVue, Tailwind CSS
+- **JavaScript/TypeScript** — Vue.js 3, Nuxt 3, React 19, Next.js 15, Tailwind CSS
 - **Dart/Flutter** — Mobile & desktop apps (Dart 3.11+, Flutter latest stable)
 - **Go** — CLI tools, microservices, background workers
 
 ### Frameworks & Libraries
-| Layer        | Stack                                         |
-|--------------|-----------------------------------------------|
-| Backend API  | Django 4.2+, Django REST Framework, SimpleJWT |
-| Task Queue   | Celery + Redis                                |
-| Frontend     | Vue.js 3, PrimeVue 4, Tailwind CSS 3          |
-| Mobile       | Flutter (Dart 3.11, arm64 macOS)              |
-| Go services  | net/http, chi, sqlx, pgx                      |
-| DB           | PostgreSQL (primary), Redis (cache/queue)     |
-| Infra        | Docker, Docker Compose, AWS (ECS/S3/CF)       |
+| Layer          | Stack                                                      |
+|----------------|-------------------------------------------------------------|
+| Backend API    | Django 4.2+, DRF, SimpleJWT / Supabase                     |
+| Task Queue     | Celery + Redis                                              |
+| Frontend (Vue) | Vue.js 3, PrimeVue 4, Nuxt 3, Pinia, Tailwind CSS          |
+| Frontend (React)| React 19, Next.js 15, TanStack (Query/Router/Table), Zustand|
+| Animations     | Framer Motion (React), Vue Transition (Vue)                 |
+| Forms          | React Hook Form + Zod (React), VeeValidate + Zod (Vue)     |
+| BaaS           | Supabase (Auth, DB, Storage, Realtime, Edge Functions)      |
+| Mobile         | Flutter (Dart 3.11, arm64 macOS)                            |
+| Go services    | net/http, chi, sqlx, pgx                                    |
+| DB             | PostgreSQL (primary), Redis (cache/queue), Supabase         |
+| Infra          | Docker, Docker Compose, Vercel, AWS (ECS/S3/CF)             |
 
 ---
 
@@ -79,6 +83,46 @@ const handleSubmit = async () => { ... }
 export default { data() { return {} } }
 </script>
 ```
+
+### React / Next.js
+- Always use **functional components** — never class components
+- TypeScript strict mode, never `any`
+- State: **Zustand** for global UI, **TanStack Query** for server state, `useState` for local
+- Forms: **React Hook Form** + `zod`, never manual validation
+- Tables: **TanStack Table** with typed column definitions
+- Animations: **Framer Motion** — variants pattern, never inline
+- Routing: **TanStack Router** (React) or App Router file-based (Next.js)
+- Next.js: Server Components by default, `'use client'` only when necessary
+- Next.js: prefer Server Actions for mutations, TanStack Query for complex client state
+- Named exports for components, never default export (except pages/layouts)
+- API calls: always via custom hooks, never raw `fetch` in components
+
+```tsx
+// GOOD
+export function UserCard({ user, onEdit }: UserCardProps) {
+  return <div>{user.name}</div>
+}
+
+// BAD — class component, default export, any
+export default class UserCard extends Component<any> { ... }
+```
+
+### Nuxt
+- Nuxt 3 auto-imports: **never import** ref, computed, useFetch, useRoute manually
+- Data: `useFetch` / `useAsyncData` for SSR, `$fetch` for client-only
+- Server routes: `server/api/` with Nitro event handlers
+- PrimeVue: via `@primevue/nuxt-module` with auto-import
+- State: Pinia via `@pinia/nuxt`
+- Forms: VeeValidate via `@vee-validate/nuxt` + Zod
+- Never use `onMounted` + `fetch` for data fetching — use `useFetch`
+
+### Supabase
+- Always enable **RLS** on every table
+- Never expose `SUPABASE_SERVICE_ROLE_KEY` to client
+- Always use typed client: `createClient<Database>(...)`
+- Regenerate types after every migration: `npx supabase gen types typescript`
+- Auth: always handle `onAuthStateChange` for token refresh
+- Storage: configure bucket policies separately from table RLS
 
 ### Flutter / Dart
 - Dart 3.11+ features: records, patterns, sealed classes — use them
@@ -166,6 +210,63 @@ src/
 └── types/               # TypeScript interfaces
 ```
 
+### React Project (Vite)
+```
+src/
+├── assets/
+├── components/          # shared/reusable + ui/ primitives
+├── features/            # feature modules (components, hooks, schemas, services, types)
+├── hooks/               # shared hooks
+├── layouts/
+├── lib/                 # utils, constants
+├── routes/              # TanStack Router route files
+├── stores/              # Zustand stores
+├── styles/
+└── types/
+```
+
+### Next.js Project (App Router)
+```
+app/
+├── (auth)/              # route groups
+├── (dashboard)/
+├── api/                 # Route Handlers
+├── layout.tsx
+├── page.tsx
+components/
+├── ui/                  # design system
+├── forms/
+├── layout/
+features/
+├── [feature]/           # components, hooks, schemas, services, types
+hooks/
+lib/
+stores/
+types/
+middleware.ts
+```
+
+### Nuxt Project
+```
+assets/
+components/              # auto-imported
+composables/             # auto-imported
+features/                # feature modules (not auto-imported)
+layouts/
+middleware/
+pages/
+plugins/
+schemas/
+server/
+├── api/                 # Nitro routes
+├── middleware/
+├── utils/
+stores/                  # Pinia (auto-imported)
+types/
+utils/                   # auto-imported
+nuxt.config.ts
+```
+
 ### Flutter Project
 ```
 lib/
@@ -215,6 +316,24 @@ flutter test --coverage
 dart analyze
 dart format .
 
+# React / Next.js
+npm run dev                          # dev server
+npm run build                        # producao
+npm run lint                         # eslint
+npx tsc --noEmit                     # type check
+
+# Nuxt
+npm run dev                          # Nitro dev server
+npm run build                        # producao
+nuxi typecheck                       # type check
+nuxi prepare                         # regenerar tipos
+
+# Supabase
+npx supabase start                   # stack local
+npx supabase db reset                # reset + migrations + seed
+npx supabase migration new X         # nova migration
+npx supabase gen types typescript --local > types/database.types.ts
+
 # Go
 go test ./... -race
 go build -o bin/server ./cmd/server
@@ -232,7 +351,11 @@ docker compose logs -f worker
 - Prefer editing existing files over creating new ones
 - When adding a feature, check for existing patterns in the codebase first
 - For DRF: always consider `permissions_classes`, `authentication_classes`, `throttle_classes`
-- For Vue: always check if a PrimeVue component exists before building custom
+- For Vue/Nuxt: always check if a PrimeVue component exists before building custom
+- For React/Next: prefer TanStack Query for server state, Zustand only for UI state
+- For Next.js: default to Server Components, add 'use client' only when needed
+- For Nuxt: use `useFetch`/`useAsyncData`, never `onMounted` + `fetch`
+- For Supabase: always check RLS policies, always regenerate types after migrations
 - For Flutter: always check `pubspec.yaml` before suggesting a new package
 - For Go: always check existing interfaces before creating new types
 - Flag N+1 queries immediately when reviewing Django ORM code
@@ -247,3 +370,7 @@ docker compose logs -f worker
 - Never create God classes or 500-line files without flagging it
 - Never skip error handling in Go
 - Never use `any` type in TypeScript as a solution
+- Never use `SUPABASE_SERVICE_ROLE_KEY` in client-side code
+- Never use class components in React — always functional
+- Never use Options API in Vue — always Composition API with `<script setup>`
+- Never fetch data in `useEffect`/`onMounted` — use TanStack Query / `useFetch`

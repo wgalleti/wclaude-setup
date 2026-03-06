@@ -112,6 +112,21 @@ yarn type-check    # tsc --noEmit
 
 ---
 
+## Nuxt Compatibility
+<!--
+Se migrar para Nuxt 3:
+- Remover vue-router manual → Nuxt usa file-based routing (pages/)
+- Remover imports de ref, computed, etc → Nuxt auto-importa
+- Mover composables/ para raiz → Nuxt auto-importa
+- Pinia: usar @pinia/nuxt module
+- PrimeVue: usar @primevue/nuxt-module (auto-import de componentes)
+- API calls: substituir useApi() por useFetch() para SSR
+- Env vars: VITE_* → NUXT_PUBLIC_* (runtimeConfig)
+- Considere usar nuxt.md template em vez deste para projetos Nuxt
+-->
+
+---
+
 ## Known Gotchas
 <!--
 - PrimeVue 4: `pt` (passthrough) substituiu `unstyled` props — usar pt:root, pt:label etc
