@@ -40,8 +40,12 @@ func runMerge() {
 			Options(
 				huh.NewOption("Django / DRF", "django"),
 				huh.NewOption("Vue.js / PrimeVue", "vue"),
+				huh.NewOption("Nuxt / Vue.js", "nuxt"),
+				huh.NewOption("React / Vite", "react"),
+				huh.NewOption("Next.js / React", "next"),
 				huh.NewOption("Flutter / Dart", "flutter"),
 				huh.NewOption("Go", "go"),
+				huh.NewOption("Supabase", "supabase"),
 				huh.NewOption("<< Voltar", "back"),
 			).
 			Value(&selected)

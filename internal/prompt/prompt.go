@@ -5,12 +5,14 @@ import "fmt"
 type PromptType string
 
 const (
-	PromptFeature  PromptType = "feature"
-	PromptBugfix   PromptType = "bugfix"
-	PromptRefactor PromptType = "refactor"
-	PromptReview   PromptType = "review"
-	PromptWidget   PromptType = "widget"
-	PromptHandler  PromptType = "handler"
+	PromptFeature   PromptType = "feature"
+	PromptBugfix    PromptType = "bugfix"
+	PromptRefactor  PromptType = "refactor"
+	PromptReview    PromptType = "review"
+	PromptWidget    PromptType = "widget"
+	PromptHandler   PromptType = "handler"
+	PromptComponent PromptType = "component"
+	PromptPage      PromptType = "page"
 )
 
 type PromptData struct {
@@ -45,11 +47,24 @@ type PromptData struct {
 	WidgetState   string
 
 	// Handler fields (Go)
-	HTTPMethod  string
-	Endpoint    string
-	InputSchema string
+	HTTPMethod   string
+	Endpoint     string
+	InputSchema  string
 	OutputSchema string
 	Errors       string
+
+	// Component fields (React/Next)
+	ComponentName    string
+	ComponentPurpose string
+	ComponentProps   string
+	ComponentState   string
+	ComponentLibs    string
+
+	// Page fields (Next/Nuxt)
+	PageRoute       string
+	PageDataSource  string
+	PageAuth        string
+	PageComponents  string
 }
 
 func Generate(d PromptData) string {
@@ -90,6 +105,19 @@ State: %s`, d.WidgetName, d.WidgetPurpose, d.WidgetProps, d.WidgetState)
 Input: %s
 Output: %s
 Erros: %s`, d.HTTPMethod, d.Endpoint, d.InputSchema, d.OutputSchema, d.Errors)
+
+	case PromptComponent:
+		return fmt.Sprintf(`Component: %s
+Proposito: %s
+Props: %s
+State: %s
+Libs: %s`, d.ComponentName, d.ComponentPurpose, d.ComponentProps, d.ComponentState, d.ComponentLibs)
+
+	case PromptPage:
+		return fmt.Sprintf(`Page: %s
+Data source: %s
+Auth: %s
+Componentes: %s`, d.PageRoute, d.PageDataSource, d.PageAuth, d.PageComponents)
 
 	default:
 		return ""

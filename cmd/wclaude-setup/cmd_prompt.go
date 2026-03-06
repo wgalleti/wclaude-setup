@@ -32,6 +32,8 @@ func runPrompt() {
 				huh.NewOption("Bug Fix", "bugfix"),
 				huh.NewOption("Refactor", "refactor"),
 				huh.NewOption("Code Review", "review"),
+				huh.NewOption("React/Next Component", "component"),
+				huh.NewOption("Page (Next/Nuxt)", "page"),
 				huh.NewOption("Flutter Widget", "widget"),
 				huh.NewOption("Go Handler", "handler"),
 				huh.NewOption("<< Voltar", "back"),
@@ -103,6 +105,27 @@ func runPrompt() {
 				huh.NewInput().Title("Input schema:").Value(&data.InputSchema),
 				huh.NewInput().Title("Output schema:").Value(&data.OutputSchema),
 				huh.NewInput().Title("Erros esperados:").Value(&data.Errors),
+			)).Run(); err != nil {
+				cancelled = true
+			}
+
+		case prompt.PromptComponent:
+			if err := huh.NewForm(huh.NewGroup(
+				huh.NewInput().Title("Nome do componente:").Value(&data.ComponentName),
+				huh.NewInput().Title("Proposito:").Value(&data.ComponentPurpose),
+				huh.NewInput().Title("Props (ex: user, onEdit, isLoading):").Value(&data.ComponentProps),
+				huh.NewInput().Title("State (local, zustand, tanstack-query):").Value(&data.ComponentState),
+				huh.NewInput().Title("Libs (ex: framer-motion, tanstack-table):").Value(&data.ComponentLibs),
+			)).Run(); err != nil {
+				cancelled = true
+			}
+
+		case prompt.PromptPage:
+			if err := huh.NewForm(huh.NewGroup(
+				huh.NewInput().Title("Rota (ex: /users/[id]):").Value(&data.PageRoute),
+				huh.NewInput().Title("Data source (server fetch, useFetch, useQuery):").Value(&data.PageDataSource),
+				huh.NewInput().Title("Auth (public, authenticated, admin):").Value(&data.PageAuth),
+				huh.NewInput().Title("Componentes usados:").Value(&data.PageComponents),
 			)).Run(); err != nil {
 				cancelled = true
 			}
