@@ -34,6 +34,13 @@ var DefaultPermissions = []string{
 	"Bash(go test *)",
 	"Bash(go vet *)",
 	"Bash(go build *)",
+	"Bash(npm run *)",
+	"Bash(npx *)",
+	"Bash(npm test *)",
+	"Bash(next lint *)",
+	"Bash(nuxi typecheck *)",
+	"Bash(npx supabase *)",
+	"Bash(npx tsc *)",
 }
 
 type InstallResult struct {

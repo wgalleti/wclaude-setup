@@ -66,6 +66,23 @@ var AvailableMCPs = []MCPServer{
 		Args:        []string{"-y", "@anthropic/primevue-mcp@latest"},
 		NeedsBinary: "npx",
 	},
+	{
+		Name:        "supabase",
+		Description: "Supabase: management API, database, auth, storage",
+		Scope:       "user",
+		Command:     "npx",
+		Args:        []string{"-y", "mcp-server-supabase", "--read-only=false"},
+		EnvVars:     map[string]string{"SUPABASE_ACCESS_TOKEN": ""},
+		NeedsBinary: "npx",
+	},
+	{
+		Name:        "chrome-devtools",
+		Description: "Chrome DevTools: debug, network, performance, screenshots",
+		Scope:       "user",
+		Command:     "npx",
+		Args:        []string{"-y", "@anthropic/chrome-devtools-mcp@latest"},
+		NeedsBinary: "npx",
+	},
 }
 
 func ListInstalled() ([]string, error) {
